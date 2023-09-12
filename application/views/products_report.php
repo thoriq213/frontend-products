@@ -22,11 +22,11 @@
                 <div class="form-group">
                     <label for="">select area</label>
                     <select class="form-control" id="area_id" name="area_id[]" multiple='multiple'>
-                        <option value="option1">Option 1</option>
-                        <option value="option2">Option 2</option>
-                        <option value="option3">Option 3</option>
-                        <option value="option4">Option 4</option>
-                        <option value="option5">Option 5</option>
+                        <?php foreach ($area as $key => $val) { ?>
+
+                            <option value="<?= $val['area_id'] ?>"><?= $val['area_name'] ?></option>
+
+                        <?php } ?>
                     </select>
                 </div>
             </div>
@@ -43,39 +43,36 @@
                 </div>
             </div>
         </div>
+        <div class="canvas">
+            <canvas id="barChart" width="400" height="200" class="my-5"></canvas>
+        </div>
+        <div class="table">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <td>Brand</td>
+                        <?php foreach ($data_table as $key_table => $val) { ?>
+                            <td><?= $key_table ?></td>
+                        <?php } ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($brand as $key => $val) { ?>
+                        <tr>
+                            <td><?= $val['brand_name'] ?></td>
+                            <?php foreach ($data_table as $key_table) { ?>
+                                <?php foreach ($key_table as $index => $val_detail) { ?>
+                                    <?php if ($val_detail['brand_id'] == $val['brand_id']) { ?>
+                                        <td><?= (int)$val_detail['percentage'] . '%' ?></td>
+                                <?php }
+                                } ?>
+                            <?php } ?>
+                        </tr>
 
-        <canvas id="barChart" width="400" height="200" class="my-5"></canvas>
-
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">First</th>
-                    <th scope="col">Last</th>
-                    <th scope="col">Handle</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <th scope="row">1</th>
-                    <td>Mark</td>
-                    <td>Otto</td>
-                    <td>@mdo</td>
-                </tr>
-                <tr>
-                    <th scope="row">2</th>
-                    <td>Jacob</td>
-                    <td>Thornton</td>
-                    <td>@fat</td>
-                </tr>
-                <tr>
-                    <th scope="row">3</th>
-                    <td>Larry</td>
-                    <td>the Bird</td>
-                    <td>@twitter</td>
-                </tr>
-            </tbody>
-        </table>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
 
         <!-- Optional JavaScript -->
         <!-- jQuery first, then Popper.js, then Bootstrap JS -->
@@ -86,12 +83,15 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
         <script>
             // Data for the chart (you can fetch this data from your database)
-            let label_chart = ['Label 1', 'Label 2', 'Label 3'];
-            let data_chart = [5, 10, 15];
+            let data = <?= json_encode($data_chart) ?>;
+
+            let label_chart = data.map(item => item.area_name);
+            let data_chart = data.map(item => item.percentage);
 
             chart(label_chart, data_chart);
 
             function chart(label, data) {
+
                 Chart.register(ChartDataLabels);
                 var data = {
                     labels: label,
@@ -163,7 +163,14 @@
                     dataType: 'json', // The expected data type of the response
                     success: function(data) {
                         // Handle the response data here
-                        console.log(data);
+                        let label_chart = $.map(data, item => item.area_name);
+                        let data_chart = $.map(data, item => item.percentage);
+
+                        $("canvas#barChart").remove();
+
+                        $("div.canvas").append('<canvas id="barChart" width="400" height="200" class="my-5"></canvas>');
+
+                        chart(label_chart, data_chart);
                     },
                     error: function(xhr, status, error) {
                         // Handle errors here
@@ -186,7 +193,42 @@
                     dataType: 'json', // The expected data type of the response
                     success: function(data) {
                         // Handle the response data here
-                        console.log(data);
+                        let header = '';
+                        let brand = '';
+                        let percentage = '';
+                        let table_field = '';
+                        let all_brand = <?= json_encode($brand) ?>;
+                        $.each(data, function(index, item){
+                             header += '<td>' + index + '</td>';
+                        });
+
+                        $.each(all_brand, function(index, item){
+                            brand += '<td>' + item.brand_name + '</td>'
+                            $.each(data, function(index_area){
+                                $.each(data[index_area], function(index_detail, item_detail){
+                                    if(item.brand_id == item_detail.brand_id){
+                                        percentage += '<td>' + parseInt(item_detail.percentage) +'%</td>'
+                                    }
+                                })
+                            })
+                            table_field += '<tr>' + brand + percentage + '</tr>';
+                            brand = '';
+                            percentage = '';
+                        });
+
+                    const row = `<table class="table table-striped">
+                <thead>
+                    <tr>
+                        <td>Brand</td>
+                        ${header}
+                    </tr>
+                </thead>
+                <tbody>
+                        ${table_field}
+                </tbody>
+            </table>`
+            console.log(row);
+            $('.table').html(row);
                     },
                     error: function(xhr, status, error) {
                         // Handle errors here
